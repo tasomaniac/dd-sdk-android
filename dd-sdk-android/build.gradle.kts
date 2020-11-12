@@ -45,6 +45,10 @@ fun isLogEnabledInRelease(): String {
     return project.findProperty(GradlePropertiesKeys.FORCE_ENABLE_LOGCAT) as? String ?: "false"
 }
 
+val javaAgent by configurations.creating {
+    extendsFrom(configurations.testImplementation.get())
+}
+
 android {
     compileSdkVersion(AndroidConfig.TARGET_SDK)
     buildToolsVersion(AndroidConfig.BUILD_TOOLS_VERSION)
@@ -72,7 +76,26 @@ android {
     }
 
     testOptions {
-        unitTests.isReturnDefaultValues = true
+        unitTests.apply {
+            isReturnDefaultValues = true
+            all(KotlinClosure1<Any, Test>({
+                (this as Test).also {
+                    if (environment["DD_INTEGRATION_JUNIT_5_ENABLED"] == "true") {
+                        // If there is an envvar to set the traces environment
+                        // for tests, the DD_ENV variable is set with its value.
+                        // The DD_ENV_TESTS envvar is defined in the gitlab-ci.yml file.
+                        environment["DD_ENV_TESTS"]?.let { environment("DD_ENV", it) }
+
+                        // To increase performance, all integrations are disabled explicitly.
+                        // This prevents the tracer evaluates if it needs to apply every
+                        // instrumentation that is enabled by default.
+                        environment("DD_INTEGRATIONS_ENABLED", "false")
+                        environment("DD_JMX_FETCH_ENABLED", "false")
+                        jvmArgs("-javaagent:" + javaAgent.asPath)
+                    }
+                }
+            }))
+        }
     }
 
     buildTypes {
@@ -133,6 +156,7 @@ dependencies {
     testImplementation(Dependencies.Libraries.JUnit5)
     testImplementation(Dependencies.Libraries.TestTools)
     testImplementation(Dependencies.Libraries.OkHttpMock)
+    javaAgent("com.datadoghq:dd-java-agent:0.67.0")
     unmock(Dependencies.Libraries.Robolectric)
 
     // Static Analysis
