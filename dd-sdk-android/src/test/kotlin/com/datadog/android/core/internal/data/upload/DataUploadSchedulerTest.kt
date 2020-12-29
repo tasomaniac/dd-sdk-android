@@ -6,11 +6,14 @@
 
 package com.datadog.android.core.internal.data.upload
 
+import com.datadog.android.core.configuration.UploadFrequency
 import com.nhaarman.mockitokotlin2.any
 import com.nhaarman.mockitokotlin2.argumentCaptor
 import com.nhaarman.mockitokotlin2.eq
 import com.nhaarman.mockitokotlin2.mock
 import com.nhaarman.mockitokotlin2.verify
+import fr.xgouchet.elmyr.annotation.Forgery
+import fr.xgouchet.elmyr.junit5.ForgeExtension
 import java.util.concurrent.ScheduledThreadPoolExecutor
 import java.util.concurrent.TimeUnit
 import org.junit.jupiter.api.BeforeEach
@@ -23,7 +26,8 @@ import org.mockito.junit.jupiter.MockitoSettings
 import org.mockito.quality.Strictness
 
 @Extensions(
-    ExtendWith(MockitoExtension::class)
+    ExtendWith(MockitoExtension::class),
+    ExtendWith(ForgeExtension::class)
 )
 @MockitoSettings(strictness = Strictness.LENIENT)
 internal class DataUploadSchedulerTest {
@@ -33,6 +37,9 @@ internal class DataUploadSchedulerTest {
     @Mock
     lateinit var mockExecutor: ScheduledThreadPoolExecutor
 
+    @Forgery
+    lateinit var fakeUploadFrequency: UploadFrequency
+
     @BeforeEach
     fun `set up`() {
         testedScheduler = DataUploadScheduler(
@@ -40,6 +47,7 @@ internal class DataUploadSchedulerTest {
             mock(),
             mock(),
             mock(),
+            fakeUploadFrequency,
             mockExecutor
         )
     }
